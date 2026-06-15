@@ -1,154 +1,219 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Mapa de Rotas - Agentes DF</title>
+    <title>Painel de Rotas e Bancas - DETRAN DF</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         body { margin: 0; padding: 0; }
         #map { position: absolute; top: 0; bottom: 0; width: 100%; height: 100vh; }
+        
+        .filter-panel {
+            position: absolute; top: 10px; right: 10px; z-index: 1000;
+            background: white; padding: 12px; border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3); font-family: Arial, sans-serif;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .filter-group { display: flex; flex-direction: column; }
+        .filter-panel label { font-weight: bold; font-size: 12px; margin-bottom: 4px; color: #2d3436; text-transform: uppercase; }
+        .filter-panel select { padding: 6px 10px; font-size: 13px; border-radius: 4px; border: 1px solid #b2bec3; width: 220px; cursor: pointer; font-weight: bold; }
+
         .info-box {
-            background: white;
-            padding: 6px 10px;
-            border-radius: 6px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-            font-family: Arial, sans-serif;
-            font-size: 12px;
-            line-height: 15px;
-            text-align: center;
-            font-weight: bold;
+            background: white; padding: 8px 12px; border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25); font-family: Arial, sans-serif;
+            font-size: 13px; line-height: 18px; text-align: center;
         }
         .vini-box { border-top: 4px solid #0018f9; color: #0018f9; }
         .fabio-box { border-top: 4px solid #6c5ce7; color: #6c5ce7; }
         .huily-box { border-top: 4px solid #ff0000; color: #ff0000; }
         .guto-box { border-top: 4px solid #2d3436; color: #2d3436; }
+        .destaque-valor { font-weight: bold; color: #2d3436; }
     </style>
 </head>
 <body>
+
+<div class="filter-panel">
+    <div class="filter-group">
+        <label for="agentSelect">👤 Filtrar por Agente:</label>
+        <select id="agentSelect" onchange="filtrarPorAgente()">
+            <option value="todos">🌍 Mostrar Todos</option>
+            <option value="vinicius">🔵 Vinícius</option>
+            <option value="fabio">🟣 Fábio</option>
+            <option value="huily">🔴 Huily</option>
+            <option value="gutemberg">⚫ Gutemberg</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <label for="bancaSelect">📍 Filtrar por Banca/Destino:</label>
+        <select id="bancaSelect" onchange="filtrarPorBanca()">
+            <option value="todas">🏁 Mostrar Todas as Bancas</option>
+            <option value="shoppingPopular">1. Shopping Popular - SIA</option>
+            <option value="novaSedeDetran">2. Nova Sede DETRAN - Asa Sul</option>
+            <option value="ginasioPlanaltina">3. Ginásio Múltiplas Funções</option>
+            <option value="detranSobradinho">4. DETRAN - Sobradinho</option>
+            <option value="auditorioDetran">5. Auditório Detran - SDN</option>
+            <option value="dvaPlanoPiloto">6. Depósito Detran - SGAN</option>
+            <option value="detranGama">7. DETRAN - Gama</option>
+            <option value="guaraII">8. Guará II (QE 25)</option>
+            <option value="detranTaguatinga">9. DETRAN - Taguatinga</option>
+            <option value="abadiao">10. Estádio Abadião - Ceilândia</option>
+            <option value="feiraTaguatinga">11. Feira Permanente - QNL</option>
+        </select>
+    </div>
+</div>
 
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    // Inicializa o mapa com visão ampla de todo o Distrito Federal
-    var map = L.map('map').setView([-15.7900, -47.8800], 10);
+    var map = L.map('map', { closePopupOnClick: false }).setView([-15.7900, -47.8800], 10);
 
-    // Adiciona o mapa base (OpenStreetMap)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap'
-    }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
 
-    // --- COORDENADAS DOS PONTOS DE ORIGEM ---
-    var paranoa = [-15.7725, -47.7760]; // Vinícius / Fábio
-    var casaHuily = [-16.0195, -48.0672]; // Gama
-    var casaGuto = [-15.8166, -48.1025]; // Ceilândia QNN 14
+    var criarIcone = function(htmlSimbolo) {
+        return L.divIcon({
+            html: '<div style="background: white; border: 2px solid #2d3436; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.4);">'+htmlSimbolo+'</div>',
+            className: '', iconSize: [24, 24], iconAnchor: [12, 12], popupAnchor: [0, -12]
+        });
+    };
+    var iconeCasa = criarIcone('🏠');
+    var iconeBanca = criarIcone('📍');
 
-    // --- DESTINOS ---
-    var shoppingPopular = [-15.7981, -47.9405]; // SIA
-    var novaSedeDetran = [-15.8194, -47.8992]; // Asa Sul
-    var ginasioPlanaltina = [-15.6231, -47.6591]; 
-    var detranSobradinho = [-15.6533, -47.7892];
-    var auditorioDetran = [-15.7871, -47.8920]; // SDN
-    var dvaPlanoPiloto = [-15.7655, -47.8910]; // SGAN Depósito
-    var detranGama = [-16.0225, -48.0560]; 
-    var guaraII = [-15.8272, -47.9825];
-    var detranTaguatinga = [-15.8043, -48.0833]; // Taguatinga Norte SIGA
-    var abadiao = [-15.8171, -48.1020]; // Estádio Abadião
-    var feiraTaguatinga = [-15.8115, -48.0792]; // QNL
+    // Coordenadas
+    var paranoa = [-15.772097, -47.776112];        
+    var casaHuily = [-16.019551, -48.067215];      
+    var casaGuto = [-15.816654, -48.102511];       
 
-    // --- MARCADORES (PONTOS DE LOCALIZAÇÃO) ---
+    var shoppingPopular = [-15.794443, -47.947209]; 
+    var novaSedeDetran = [-15.820251, -47.901554];  
+    var ginasioPlanaltina = [-15.620247, -47.662115]; 
+    var detranSobradinho = [-15.654152, -47.789214]; 
+    var auditorioDetran = [-15.783451, -47.899214];  
+    var dvaPlanoPiloto = [-15.765104, -47.890112];   
+    var detranGama = [-16.022415, -48.055811];      
+    var guaraII = [-15.824102, -47.985114];         
+    var detranTaguatinga = [-15.805541, -48.086214]; 
+    var abadiao = [-15.819247, -48.100214];         
+    var feiraTaguatinga = [-15.810541, -48.077215];  
+
+    var grupoVinicius = L.featureGroup().addTo(map);
+    var grupoFabio = L.featureGroup().addTo(map);
+    var grupoHuily = L.featureGroup().addTo(map);
+    var grupoGutemberg = L.featureGroup().addTo(map);
+    var grupoGeral = L.featureGroup([grupoVinicius, grupoFabio, grupoHuily, grupoGutemberg]);
+
+    var marcadoresBancas = {};
+
+    function adicionarBanca(grupo, chave, latlng, popupText) {
+        var m = L.marker(latlng, {icon: iconeBanca}).addTo(grupo).bindPopup(popupText);
+        if (!marcadoresBancas[chave]) marcadoresBancas[chave] = [];
+        marcadoresBancas[chave].push({marcador: m, grupo: grupo});
+    }
+
+    var pOp = { closeButton: false, autoClose: false, closeOnClick: false };
+
+    // --- AGENTE: VINÍCIUS ---
+    L.marker(paranoa, {icon: iconeCasa}).addTo(grupoVinicius).bindPopup('<b>Casa do Agente</b><br>Paranoá (Vinícius)').openPopup();
+    adicionarBanca(grupoVinicius, 'shoppingPopular', shoppingPopular, '<b>Shopping Popular - SIA</b><br>[Vinícius Rota 1]');
+    adicionarBanca(grupoVinicius, 'novaSedeDetran', novaSedeDetran, '<b>Nova Sede DETRAN-DF</b><br>[Vinícius Rota 1]');
+    adicionarBanca(grupoVinicius, 'ginasioPlanaltina', ginasioPlanaltina, '<b>Ginásio de Múltiplas Funções</b><br>[Vinícius Rota 2]');
+    adicionarBanca(grupoVinicius, 'detranSobradinho', detranSobradinho, '<b>DETRAN - Sobradinho</b><br>[Vinícius Rota 2]');
     
-    // Casas dos Agentes
-    L.marker(paranoa).addTo(map).bindPopup('<b>Casa dos Agentes</b><br>Paranoá (Vinícius / Fábio)');
-    L.marker(casaHuily).addTo(map).bindPopup('<b>Casa dos Agentes</b><br>Gama (Huily)');
-    L.marker(casaGuto).addTo(map).bindPopup('<b>Casa dos Agentes</b><br>Ceilândia QNN 14 (Gutemberg)');
-
-    // Pontos de Encontro / Pontos Finais
-    L.marker(shoppingPopular).addTo(map).bindPopup('<b>Ponto de Encontro</b><br>Shopping Popular - SIA');
-    L.marker(novaSedeDetran).addTo(map).bindPopup('<b>Ponto Final / Encontro</b><br>Nova Sede DETRAN-DF (Asa Sul)');
-    L.marker(ginasioPlanaltina).addTo(map).bindPopup('<b>Ponto de Encontro</b><br>Ginásio de Múltiplas Funções - Planaltina');
-    L.marker(detranSobradinho).addTo(map).bindPopup('<b>Ponto Final</b><br>DETRAN - Sobradinho');
-    L.marker(auditorioDetran).addTo(map).bindPopup('<b>Ponto de Encontro</b><br>Auditório do Detran-DF (SDN)');
-    L.marker(dvaPlanoPiloto).addTo(map).bindPopup('<b>Ponto de Encontro</b><br>DVA 1 Detran (Depósito SGAN)');
-    L.marker(detranGama).addTo(map).bindPopup('<b>Ponto Final</b><br>Detran DF - Gama');
-    L.marker(guaraII).addTo(map).bindPopup('<b>Ponto de Encontro</b><br>Guará II (QE 25)');
-    L.marker(detranTaguatinga).addTo(map).bindPopup('<b>Ponto Final</b><br>Detran DF - Taguatinga');
-    L.marker(abadiao).addTo(map).bindPopup('<b>Ponto de Encontro</b><br>Estádio Maria de Lourdes Abadia');
-    L.marker(feiraTaguatinga).addTo(map).bindPopup('<b>Ponto de Encontro</b><br>Estacionamento da Feira Permanente (QNL)');
-
-    // --- ROTAS DO VINÍCIUS (AZUL) ---
-    var vini1 = L.polyline([paranoa, shoppingPopular, novaSedeDetran, paranoa], {
-        color: '#0018f9', weight: 3, dashArray: '8, 8', opacity: 0.8
-    }).addTo(map);
-
-    var vini2 = L.polyline([paranoa, ginasioPlanaltina, detranSobradinho, paranoa], {
-        color: '#0018f9', weight: 3, dashArray: '8, 8', opacity: 0.8
-    }).addTo(map);
-
-    // --- ROTAS DO FÁBIO (ROXO FORTE) ---
-    var fabio1 = L.polyline([paranoa, auditorioDetran, novaSedeDetran, paranoa], {
-        color: '#6c5ce7', weight: 3, dashArray: '8, 8', opacity: 0.85
-    }).addTo(map);
-
-    // --- ROTAS DA HUILY (VERMELHO) ---
-    var huily1 = L.polyline([casaHuily, detranGama, casaHuily], {
-        color: '#ff0000', weight: 3, dashArray: '8, 8', opacity: 0.8
-    }).addTo(map);
-
-    var huily2 = L.polyline([casaHuily, dvaPlanoPiloto, novaSedeDetran, casaHuily], {
-        color: '#ff0000', weight: 3, dashArray: '8, 8', opacity: 0.8
-    }).addTo(map);
-
-    var huily3 = L.polyline([casaHuily, guaraII, novaSedeDetran, casaHuily], {
-        color: '#ff0000', weight: 3, dashArray: '8, 8', opacity: 0.8
-    }).addTo(map);
-
-    // --- ROTAS DO GUTEMBERG (PRETO) ---
-    var guto1 = L.polyline([casaGuto, detranTaguatinga, casaGuto], {
-        color: '#2d3436', weight: 3, dashArray: '8, 8', opacity: 0.85
-    }).addTo(map);
-
-    var guto2 = L.polyline([casaGuto, abadiao, detranTaguatinga, casaGuto], {
-        color: '#2d3436', weight: 3, dashArray: '8, 8', opacity: 0.85
-    }).addTo(map);
-
-    var guto3 = L.polyline([casaGuto, feiraTaguatinga, detranTaguatinga, casaGuto], {
-        color: '#2d3436', weight: 3, dashArray: '8, 8', opacity: 0.85
-    }).addTo(map);
-
-
-    // --- BALÕES DE EXPLICAÇÃO DO MAPA ---
+    L.polyline([paranoa, shoppingPopular, novaSedeDetran, paranoa], {color: '#0018f9', weight: 3, dashArray: '8, 8', opacity: 0.8}).addTo(grupoVinicius);
+    L.polyline([paranoa, ginasioPlanaltina, detranSobradinho, paranoa], {color: '#0018f9', weight: 3, dashArray: '8, 8', opacity: 0.8}).addTo(grupoVinicius);
     
-    // Vinícius
-    L.popup({ closeButton: false, autoClose: false }).setLatLng([-15.8200, -47.8400])
-        .setContent('<div class="info-box vini-box">Vinícius<br>Rota: SIA / Nova Sede</div>').openOn(map);
-    L.popup({ closeButton: false, autoClose: false }).setLatLng([-15.6800, -47.7200])
-        .setContent('<div class="info-box vini-box">Vinícius<br>Rota: Planaltina / Sobradinho</div>').openOn(map);
+    // Valores de acordo com seu envio
+    L.popup(pOp).setLatLng([-15.7900, -47.8500]).setContent('<div class="info-box vini-box"><b>Vinícius</b><br>Shopping Popular - SIA<br>KM Total: 57 Km<br><span class="destaque-valor">Custo: R$ 56,04</span></div>').addTo(grupoVinicius);
+    L.popup(pOp).setLatLng([-15.6900, -47.7200]).setContent('<div class="info-box vini-box"><b>Vinícius</b><br>Planaltina / Sobradinho<br>KM Total: 71 Km<br><span class="destaque-valor">Custo: R$ 59,93</span></div>').addTo(grupoVinicius);
 
-    // Fábio (Balão Atualizado para Roxo Forte)
-    L.popup({ closeButton: false, autoClose: false }).setLatLng([-15.7500, -47.8200])
-        .setContent('<div class="info-box fabio-box">Fábio<br>Rota: Auditório / Nova Sede</div>').openOn(map);
+    // --- AGENTE: FÁBIO ---
+    L.marker(paranoa, {icon: iconeCasa}).addTo(grupoFabio).bindPopup('<b>Casa do Agente</b><br>Paranoá (Fábio)').openPopup();
+    adicionarBanca(grupoFabio, 'auditorioDetran', auditorioDetran, '<b>Auditório do Detran-DF (SDN)</b><br>[Fábio]');
+    adicionarBanca(grupoFabio, 'novaSedeDetran', novaSedeDetran, '<b>Nova Sede DETRAN-DF</b><br>[Fábio]');
+    
+    L.polyline([paranoa, auditorioDetran, novaSedeDetran, paranoa], {color: '#6c5ce7', weight: 3, dashArray: '8, 8', opacity: 0.85}).addTo(grupoFabio);
+    
+    // Valores de acordo com seu envio (Considerando que a rota principal dele enviada é para a Sede/Asa Sul)
+    L.popup(pOp).setLatLng([-15.7650, -47.8300]).setContent('<div class="info-box fabio-box"><b>Fábio</b><br>Detran Sede (Asa Sul)<br>KM Total: 68 Km<br><span class="destaque-valor">Custo: R$ 57,32</span></div>').addTo(grupoFabio);
 
-    // Huily
-    L.popup({ closeButton: false, autoClose: false }).setLatLng([-16.0350, -48.0610])
-        .setContent('<div class="info-box huily-box">Huily<br>Rota: Detran Gama</div>').openOn(map);
-    L.popup({ closeButton: false, autoClose: false }).setLatLng([-15.9000, -47.9800])
-        .setContent('<div class="info-box huily-box">Huily<br>Rota: Depósito SGAN</div>').openOn(map);
-    L.popup({ closeButton: false, autoClose: false }).setLatLng([-15.9300, -48.0400])
-        .setContent('<div class="info-box huily-box">Huily<br>Rota: Guará II</div>').openOn(map);
+    // --- AGENTE: HUILY ---
+    L.marker(casaHuily, {icon: iconeCasa}).addTo(grupoHuily).bindPopup('<b>Casa do Agente</b><br>Gama (Huily)').openPopup();
+    adicionarBanca(grupoHuily, 'detranGama', detranGama, '<b>Detran DF - Gama</b><br>[Huily Rota 1]');
+    adicionarBanca(grupoHuily, 'dvaPlanoPiloto', dvaPlanoPiloto, '<b>DVA 1 Detran (SGAN)</b><br>[Huily Rota 2]');
+    adicionarBanca(grupoHuily, 'novaSedeDetran', novaSedeDetran, '<b>Nova Sede DETRAN-DF</b><br>[Huily Rota 2 e 3]');
+    adicionarBanca(grupoHuily, 'guaraII', guaraII, '<b>Guará II (QE 25)</b><br>[Huily Rota 3]');
 
-    // Gutemberg
-    L.popup({ closeButton: false, autoClose: false }).setLatLng([-15.7850, -48.0900])
-        .setContent('<div class="info-box guto-box">Gutemberg<br>Rota: Detran Taguatinga</div>').openOn(map);
-    L.popup({ closeButton: false, autoClose: false }).setLatLng([-15.8300, -48.0750])
-        .setContent('<div class="info-box guto-box">Gutemberg<br>Rota: Feira QNL</div>').openOn(map);
+    L.polyline([casaHuily, detranGama, casaHuily], {color: '#ff0000', weight: 3, dashArray: '8, 8', opacity: 0.8}).addTo(grupoHuily);
+    L.polyline([casaHuily, dvaPlanoPiloto, novaSedeDetran, casaHuily], {color: '#ff0000', weight: 3, dashArray: '8, 8', opacity: 0.8}).addTo(grupoHuily);
+    L.polyline([casaHuily, guaraII, novaSedeDetran, casaHuily], {color: '#ff0000', weight: 3, dashArray: '8, 8', opacity: 0.8}).addTo(grupoHuily);
 
-    // Ajusta o enquadramento final automaticamente para abraçar todo o DF
-    var grupoGeral = L.featureGroup([vini1, vini2, fabio1, huily1, huily2, huily3, guto1, guto2, guto3]);
+    // Valores de acordo com seu envio
+    L.popup(pOp).setLatLng([-16.0350, -48.0610]).setContent('<div class="info-box huily-box"><b>Huily</b><br>Gama<br>KM Total: 19 Km<br><span class="destaque-valor">Custo: R$ 16,15</span></div>').addTo(grupoHuily);
+    L.popup(pOp).setLatLng([-15.9100, -47.9600]).setContent('<div class="info-box huily-box"><b>Huily</b><br>DVA1 (SGAN)<br>KM Total: 82 Km<br><span class="destaque-valor">Custo: R$ 69,70</span></div>').addTo(grupoHuily);
+    L.popup(pOp).setLatLng([-15.9400, -48.0200]).setContent('<div class="info-box huily-box"><b>Huily</b><br>Guará II<br>KM Total: 70,5 Km<br><span class="destaque-valor">Custo: R$ 60,00</span></div>').addTo(grupoHuily);
+
+    // --- AGENTE: GUTEMBERG ---
+    L.marker(casaGuto, {icon: iconeCasa}).addTo(grupoGutemberg).bindPopup('<b>Casa do Agente</b><br>Ceilândia (Gutemberg)').openPopup();
+    adicionarBanca(grupoGutemberg, 'detranTaguatinga', detranTaguatinga, '<b>Detran DF - Taguatinga</b><br>[Gutemberg]');
+    adicionarBanca(grupoGutemberg, 'abadiao', abadiao, '<b>Estádio Abadião</b><br>[Gutemberg Rota 2]');
+    adicionarBanca(grupoGutemberg, 'feiraTaguatinga', feiraTaguatinga, '<b>Feira Permanente (QNL)</b><br>[Gutemberg Rota 3]');
+
+    L.polyline([casaGuto, detranTaguatinga, casaGuto], {color: '#2d3436', weight: 3, dashArray: '8, 8', opacity: 0.85}).addTo(grupoGutemberg);
+    L.polyline([casaGuto, abadiao, detranTaguatinga, casaGuto], {color: '#2d3436', weight: 3, dashArray: '8, 8', opacity: 0.85}).addTo(grupoGutemberg);
+    L.polyline([casaGuto, feiraTaguatinga, detranTaguatinga, casaGuto], {color: '#2d3436', weight: 3, dashArray: '8, 8', opacity: 0.85}).addTo(grupoGutemberg);
+
+    // Valores de acordo com seu envio
+    L.popup(pOp).setLatLng([-15.7950, -48.0920]).setContent('<div class="info-box guto-box"><b>Gutemberg</b><br>Detran Taguatinga<br>KM Total: 17,9 Km<br><span class="destaque-valor">Custo: R$ 12,42</span></div>').addTo(grupoGutemberg);
+    // Para organizar visualmente, agrupei a informação do Abadião no mesmo ponto do Taguatinga (que é do lado) ou adicionei um pouco ao sul
+    L.popup(pOp).setLatLng([-15.8220, -48.0850]).setContent('<div class="info-box guto-box"><b>Gutemberg</b><br>Feira QNL<br>KM Total: 19,7 Km<br><span class="destaque-valor">Custo: R$ 16,75</span><br><hr style="margin:4px 0;"><br>Abadião<br>KM Total: 17,9 Km<br><span class="destaque-valor">Custo: R$ 15,22</span></div>').addTo(grupoGutemberg);
+
     map.fitBounds(grupoGeral.getBounds(), { padding: [40, 40] });
 
+    // --- SISTEMA INTERATIVO DE FILTRAGEM ---
+    function reativarTodasCamadas() {
+        map.addLayer(grupoVinicius); map.addLayer(grupoFabio); map.addLayer(grupoHuily); map.addLayer(grupoGutemberg);
+    }
+
+    function filtrarPorAgente() {
+        document.getElementById("bancaSelect").value = "todas";
+        var escolha = document.getElementById("agentSelect").value;
+        map.removeLayer(grupoVinicius); map.removeLayer(grupoFabio); map.removeLayer(grupoHuily); map.removeLayer(grupoGutemberg);
+
+        if (escolha === "todos") {
+            reativarTodasCamadas(); map.fitBounds(grupoGeral.getBounds(), { padding: [40, 40] });
+        } else if (escolha === "vinicius") {
+            map.addLayer(grupoVinicius); map.fitBounds(grupoVinicius.getBounds(), { padding: [60, 60] });
+        } else if (escolha === "fabio") {
+            map.addLayer(grupoFabio); map.fitBounds(grupoFabio.getBounds(), { padding: [80, 80] });
+        } else if (escolha === "huily") {
+            map.addLayer(grupoHuily); map.fitBounds(grupoHuily.getBounds(), { padding: [60, 60] });
+        } else if (escolha === "gutemberg") {
+            map.addLayer(grupoGutemberg); map.fitBounds(grupoGutemberg.getBounds(), { padding: [80, 80] });
+        }
+    }
+
+    function filtrarPorBanca() {
+        document.getElementById("agentSelect").value = "todos";
+        var escolhaBanca = document.getElementById("bancaSelect").value;
+
+        if (escolhaBanca === "todas") {
+            reativarTodasCamadas(); map.fitBounds(grupoGeral.getBounds(), { padding: [40, 40] }); return;
+        }
+
+        map.removeLayer(grupoVinicius); map.removeLayer(grupoFabio); map.removeLayer(grupoHuily); map.removeLayer(grupoGutemberg);
+
+        var alvos = marcadoresBancas[escolhaBanca];
+        if (alvos && alvos.length > 0) {
+            var boundsFoco = L.latLngBounds();
+            alvos.forEach(function(item) {
+                if (!map.hasLayer(item.grupo)) map.addLayer(item.grupo);
+                boundsFoco.extend(item.marcador.getLatLng());
+            });
+            map.setView(boundsFoco.getCenter(), 12);
+            alvos.forEach(function(item) { item.marcador.openPopup(); });
+        }
+    }
 </script>
 </body>
 </html>
