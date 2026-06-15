@@ -58,10 +58,25 @@
     var abadiao = [-15.8171, -48.1020]; // Estádio Abadião
     var feiraTaguatinga = [-15.8115, -48.0792]; // QNL
 
-    // --- MARCADORES DE ORIGEM ---
-    L.marker(paranoa).addTo(map).bindPopup('<b>Origem Leste</b><br>Paranoá (Vinícius / Fábio)');
-    L.marker(casaHuily).addTo(map).bindPopup('<b>Origem Sul</b><br>Gama (Huily)');
-    L.marker(casaGuto).addTo(map).bindPopup('<b>Origem Oeste</b><br>Ceilândia QNN 14 (Gutemberg)');
+    // --- MARCADORES (PONTOS DE LOCALIZAÇÃO) ---
+    
+    // Casas dos Agentes
+    L.marker(paranoa).addTo(map).bindPopup('<b>Casa dos Agentes</b><br>Paranoá (Vinícius / Fábio)');
+    L.marker(casaHuily).addTo(map).bindPopup('<b>Casa dos Agentes</b><br>Gama (Huily)');
+    L.marker(casaGuto).addTo(map).bindPopup('<b>Casa dos Agentes</b><br>Ceilândia QNN 14 (Gutemberg)');
+
+    // Pontos de Encontro / Pontos Finais
+    L.marker(shoppingPopular).addTo(map).bindPopup('<b>Ponto de Encontro</b><br>Shopping Popular - SIA');
+    L.marker(novaSedeDetran).addTo(map).bindPopup('<b>Ponto Final / Encontro</b><br>Nova Sede DETRAN-DF (Asa Sul)');
+    L.marker(ginasioPlanaltina).addTo(map).bindPopup('<b>Ponto de Encontro</b><br>Ginásio de Múltiplas Funções - Planaltina');
+    L.marker(detranSobradinho).addTo(map).bindPopup('<b>Ponto Final</b><br>DETRAN - Sobradinho');
+    L.marker(auditorioDetran).addTo(map).bindPopup('<b>Ponto de Encontro</b><br>Auditório do Detran-DF (SDN)');
+    L.marker(dvaPlanoPiloto).addTo(map).bindPopup('<b>Ponto de Encontro</b><br>DVA 1 Detran (Depósito SGAN)');
+    L.marker(detranGama).addTo(map).bindPopup('<b>Ponto Final</b><br>Detran DF - Gama');
+    L.marker(guaraII).addTo(map).bindPopup('<b>Ponto de Encontro</b><br>Guará II (QE 25)');
+    L.marker(detranTaguatinga).addTo(map).bindPopup('<b>Ponto Final</b><br>Detran DF - Taguatinga');
+    L.marker(abadiao).addTo(map).bindPopup('<b>Ponto de Encontro</b><br>Estádio Maria de Lourdes Abadia');
+    L.marker(feiraTaguatinga).addTo(map).bindPopup('<b>Ponto de Encontro</b><br>Estacionamento da Feira Permanente (QNL)');
 
     // --- ROTAS DO VINÍCIUS (AZUL) ---
     var vini1 = L.polyline([paranoa, shoppingPopular, novaSedeDetran, paranoa], {
