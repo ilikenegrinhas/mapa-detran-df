@@ -20,7 +20,7 @@
             font-weight: bold;
         }
         .vini-box { border-top: 4px solid #0018f9; color: #0018f9; }
-        .fabio-box { border-top: 4px solid #f1c40f; color: #d4ac0d; }
+        .fabio-box { border-top: 4px solid #6c5ce7; color: #6c5ce7; }
         .huily-box { border-top: 4px solid #ff0000; color: #ff0000; }
         .guto-box { border-top: 4px solid #2d3436; color: #2d3436; }
     </style>
@@ -87,9 +87,9 @@
         color: '#0018f9', weight: 3, dashArray: '8, 8', opacity: 0.8
     }).addTo(map);
 
-    // --- ROTAS DO FÁBIO (AMARELO) ---
+    // --- ROTAS DO FÁBIO (ROXO FORTE) ---
     var fabio1 = L.polyline([paranoa, auditorioDetran, novaSedeDetran, paranoa], {
-        color: '#f1c40f', weight: 3, dashArray: '8, 8', opacity: 0.85
+        color: '#6c5ce7', weight: 3, dashArray: '8, 8', opacity: 0.85
     }).addTo(map);
 
     // --- ROTAS DA HUILY (VERMELHO) ---
@@ -127,7 +127,7 @@
     L.popup({ closeButton: false, autoClose: false }).setLatLng([-15.6800, -47.7200])
         .setContent('<div class="info-box vini-box">Vinícius<br>Rota: Planaltina / Sobradinho</div>').openOn(map);
 
-    // Fábio
+    // Fábio (Balão Atualizado para Roxo Forte)
     L.popup({ closeButton: false, autoClose: false }).setLatLng([-15.7500, -47.8200])
         .setContent('<div class="info-box fabio-box">Fábio<br>Rota: Auditório / Nova Sede</div>').openOn(map);
 
