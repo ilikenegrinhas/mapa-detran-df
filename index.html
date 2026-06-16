@@ -7,10 +7,10 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         body { margin: 0; padding: 0; }
-        #map { position: absolute; top: 0; bottom: 0; width: 100%; height: 100vh; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; height: 100vh; z-index: 1; }
         
         .filter-panel {
-            position: absolute; top: 10px; right: 10px; z-index: 1000;
+            position: absolute; top: 10px; right: 10px; z-index: 9999;
             background: white; padding: 12px; border-radius: 8px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.3); font-family: Arial, sans-serif;
             display: flex; flex-direction: column; gap: 10px;
@@ -32,6 +32,8 @@
     </style>
 </head>
 <body>
+
+<div id="map"></div>
 
 <div class="filter-panel">
     <div class="filter-group">
@@ -63,12 +65,9 @@
     </div>
 </div>
 
-<div id="map"></div>
-
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     var map = L.map('map', { closePopupOnClick: false }).setView([-15.7900, -47.8800], 10);
-
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
 
     var criarIcone = function(htmlSimbolo) {
@@ -97,121 +96,202 @@
     var abadiao = [-15.819247, -48.100214];         
     var feiraTaguatinga = [-15.810541, -48.077215];  
 
-    var grupoVinicius = L.featureGroup().addTo(map);
-    var grupoFabio = L.featureGroup().addTo(map);
-    var grupoHuily = L.featureGroup().addTo(map);
-    var grupoGutemberg = L.featureGroup().addTo(map);
-    var grupoGeral = L.featureGroup([grupoVinicius, grupoFabio, grupoHuily, grupoGutemberg]);
+    // Grupos de Agentes
+    var gVini = L.featureGroup();
+    var gFabio = L.featureGroup();
+    var gHuily = L.featureGroup();
+    var gGuto = L.featureGroup();
 
-    var marcadoresBancas = {};
+    // Grupos Específicos por Banca (Isola a Rota)
+    var bSIA = L.featureGroup();
+    var bSede = L.featureGroup();
+    var bPlanaltina = L.featureGroup();
+    var bSobradinho = L.featureGroup();
+    var bAuditorio = L.featureGroup();
+    var bDVA = L.featureGroup();
+    var bGama = L.featureGroup();
+    var bGuara = L.featureGroup();
+    var bTaguatinga = L.featureGroup();
+    var bAbadiao = L.featureGroup();
+    var bFeira = L.featureGroup();
 
-    function adicionarBanca(grupo, chave, latlng, popupText) {
-        var m = L.marker(latlng, {icon: iconeBanca}).addTo(grupo).bindPopup(popupText);
-        if (!marcadoresBancas[chave]) marcadoresBancas[chave] = [];
-        marcadoresBancas[chave].push({marcador: m, grupo: grupo});
+    var gBancas = {
+        'shoppingPopular': bSIA, 'novaSedeDetran': bSede, 'ginasioPlanaltina': bPlanaltina, 'detranSobradinho': bSobradinho,
+        'auditorioDetran': bAuditorio, 'dvaPlanoPiloto': bDVA, 'detranGama': bGama, 'guaraII': bGuara,
+        'detranTaguatinga': bTaguatinga, 'abadiao': bAbadiao, 'feiraTaguatinga': bFeira
+    };
+
+    // Função auxiliar para distribuir os elementos nos grupos certos
+    function add(layer, gruposArr) {
+        gruposArr.forEach(function(g) { g.addLayer(layer); });
     }
 
     var pOp = { closeButton: false, autoClose: false, closeOnClick: false };
 
     // --- AGENTE: VINÍCIUS ---
-    L.marker(paranoa, {icon: iconeCasa}).addTo(grupoVinicius).bindPopup('<b>Casa do Agente</b><br>Paranoá (Vinícius)').openPopup();
-    adicionarBanca(grupoVinicius, 'shoppingPopular', shoppingPopular, '<b>Shopping Popular - SIA</b><br>[Vinícius Rota 1]');
-    adicionarBanca(grupoVinicius, 'novaSedeDetran', novaSedeDetran, '<b>Nova Sede DETRAN-DF</b><br>[Vinícius Rota 1]');
-    adicionarBanca(grupoVinicius, 'ginasioPlanaltina', ginasioPlanaltina, '<b>Ginásio de Múltiplas Funções</b><br>[Vinícius Rota 2]');
-    adicionarBanca(grupoVinicius, 'detranSobradinho', detranSobradinho, '<b>DETRAN - Sobradinho</b><br>[Vinícius Rota 2]');
-    
-    L.polyline([paranoa, shoppingPopular, novaSedeDetran, paranoa], {color: '#0018f9', weight: 3, dashArray: '8, 8', opacity: 0.8}).addTo(grupoVinicius);
-    L.polyline([paranoa, ginasioPlanaltina, detranSobradinho, paranoa], {color: '#0018f9', weight: 3, dashArray: '8, 8', opacity: 0.8}).addTo(grupoVinicius);
-    
-    // Valores de acordo com seu envio
-    L.popup(pOp).setLatLng([-15.7900, -47.8500]).setContent('<div class="info-box vini-box"><b>Vinícius</b><br>Shopping Popular - SIA<br>KM Total: 57 Km<br><span class="destaque-valor">Custo: R$ 56,04</span></div>').addTo(grupoVinicius);
-    L.popup(pOp).setLatLng([-15.6900, -47.7200]).setContent('<div class="info-box vini-box"><b>Vinícius</b><br>Planaltina / Sobradinho<br>KM Total: 71 Km<br><span class="destaque-valor">Custo: R$ 59,93</span></div>').addTo(grupoVinicius);
+    var viniCasa = L.marker(paranoa, {icon: iconeCasa}).bindPopup('<b>Casa do Agente</b><br>Paranoá (Vinícius)');
+    add(viniCasa, [gVini, bSIA, bSede, bPlanaltina, bSobradinho]);
+
+    var mViniSIA = L.marker(shoppingPopular, {icon: iconeBanca}).bindPopup('<b>Shopping Popular - SIA</b><br>[Vinícius Rota 1]');
+    add(mViniSIA, [gVini, bSIA]);
+
+    var mViniSede = L.marker(novaSedeDetran, {icon: iconeBanca}).bindPopup('<b>Nova Sede DETRAN-DF</b><br>[Vinícius Rota 1]');
+    add(mViniSede, [gVini, bSede]);
+
+    var mPlanaltina = L.marker(ginasioPlanaltina, {icon: iconeBanca}).bindPopup('<b>Ginásio de Múltiplas Funções</b><br>[Vinícius Rota 2]');
+    add(mPlanaltina, [gVini, bPlanaltina]);
+
+    var mSobradinho = L.marker(detranSobradinho, {icon: iconeBanca}).bindPopup('<b>DETRAN - Sobradinho</b><br>[Vinícius Rota 2]');
+    add(mSobradinho, [gVini, bSobradinho]);
+
+    var rotaVini1 = L.polyline([paranoa, shoppingPopular, novaSedeDetran, paranoa], {color: '#0018f9', weight: 3, dashArray: '8, 8', opacity: 0.8});
+    add(rotaVini1, [gVini, bSIA, bSede]);
+
+    var rotaVini2 = L.polyline([paranoa, ginasioPlanaltina, detranSobradinho, paranoa], {color: '#0018f9', weight: 3, dashArray: '8, 8', opacity: 0.8});
+    add(rotaVini2, [gVini, bPlanaltina, bSobradinho]);
+
+    var popVini1 = L.popup(pOp).setLatLng([-15.7900, -47.8500]).setContent('<div class="info-box vini-box"><b>Vinícius</b><br>Shopping Popular - SIA<br>KM Total: 57 Km<br><span class="destaque-valor">Custo: R$ 56,04</span></div>');
+    add(popVini1, [gVini, bSIA, bSede]);
+
+    var popVini2 = L.popup(pOp).setLatLng([-15.6900, -47.7200]).setContent('<div class="info-box vini-box"><b>Vinícius</b><br>Planaltina / Sobradinho<br>KM Total: 71 Km<br><span class="destaque-valor">Custo: R$ 59,93</span></div>');
+    add(popVini2, [gVini, bPlanaltina, bSobradinho]);
+
 
     // --- AGENTE: FÁBIO ---
-    L.marker(paranoa, {icon: iconeCasa}).addTo(grupoFabio).bindPopup('<b>Casa do Agente</b><br>Paranoá (Fábio)').openPopup();
-    adicionarBanca(grupoFabio, 'auditorioDetran', auditorioDetran, '<b>Auditório do Detran-DF (SDN)</b><br>[Fábio]');
-    adicionarBanca(grupoFabio, 'novaSedeDetran', novaSedeDetran, '<b>Nova Sede DETRAN-DF</b><br>[Fábio]');
-    
-    L.polyline([paranoa, auditorioDetran, novaSedeDetran, paranoa], {color: '#6c5ce7', weight: 3, dashArray: '8, 8', opacity: 0.85}).addTo(grupoFabio);
-    
-    // Valores de acordo com seu envio (Considerando que a rota principal dele enviada é para a Sede/Asa Sul)
-    L.popup(pOp).setLatLng([-15.7650, -47.8300]).setContent('<div class="info-box fabio-box"><b>Fábio</b><br>Detran Sede (Asa Sul)<br>KM Total: 68 Km<br><span class="destaque-valor">Custo: R$ 57,32</span></div>').addTo(grupoFabio);
+    var fabioCasa = L.marker(paranoa, {icon: iconeCasa}).bindPopup('<b>Casa do Agente</b><br>Paranoá (Fábio)');
+    add(fabioCasa, [gFabio, bAuditorio, bSede]);
+
+    var mAuditorio = L.marker(auditorioDetran, {icon: iconeBanca}).bindPopup('<b>Auditório do Detran-DF (SDN)</b><br>[Fábio]');
+    add(mAuditorio, [gFabio, bAuditorio]);
+
+    var mFabioSede = L.marker(novaSedeDetran, {icon: iconeBanca}).bindPopup('<b>Nova Sede DETRAN-DF</b><br>[Fábio]');
+    add(mFabioSede, [gFabio, bSede]);
+
+    var rotaFabio1 = L.polyline([paranoa, auditorioDetran, novaSedeDetran, paranoa], {color: '#6c5ce7', weight: 3, dashArray: '8, 8', opacity: 0.85});
+    add(rotaFabio1, [gFabio, bAuditorio, bSede]);
+
+    var popFabio = L.popup(pOp).setLatLng([-15.7650, -47.8300]).setContent('<div class="info-box fabio-box"><b>Fábio</b><br>Detran Sede (Asa Sul)<br>KM Total: 68 Km<br><span class="destaque-valor">Custo: R$ 57,32</span></div>');
+    add(popFabio, [gFabio, bAuditorio, bSede]);
+
 
     // --- AGENTE: HUILY ---
-    L.marker(casaHuily, {icon: iconeCasa}).addTo(grupoHuily).bindPopup('<b>Casa do Agente</b><br>Gama (Huily)').openPopup();
-    adicionarBanca(grupoHuily, 'detranGama', detranGama, '<b>Detran DF - Gama</b><br>[Huily Rota 1]');
-    adicionarBanca(grupoHuily, 'dvaPlanoPiloto', dvaPlanoPiloto, '<b>DVA 1 Detran (SGAN)</b><br>[Huily Rota 2]');
-    adicionarBanca(grupoHuily, 'novaSedeDetran', novaSedeDetran, '<b>Nova Sede DETRAN-DF</b><br>[Huily Rota 2 e 3]');
-    adicionarBanca(grupoHuily, 'guaraII', guaraII, '<b>Guará II (QE 25)</b><br>[Huily Rota 3]');
+    var huilyCasa = L.marker(casaHuily, {icon: iconeCasa}).bindPopup('<b>Casa do Agente</b><br>Gama (Huily)');
+    add(huilyCasa, [gHuily, bGama, bDVA, bGuara, bSede]);
 
-    L.polyline([casaHuily, detranGama, casaHuily], {color: '#ff0000', weight: 3, dashArray: '8, 8', opacity: 0.8}).addTo(grupoHuily);
-    L.polyline([casaHuily, dvaPlanoPiloto, novaSedeDetran, casaHuily], {color: '#ff0000', weight: 3, dashArray: '8, 8', opacity: 0.8}).addTo(grupoHuily);
-    L.polyline([casaHuily, guaraII, novaSedeDetran, casaHuily], {color: '#ff0000', weight: 3, dashArray: '8, 8', opacity: 0.8}).addTo(grupoHuily);
+    var mGama = L.marker(detranGama, {icon: iconeBanca}).bindPopup('<b>Detran DF - Gama</b><br>[Huily Rota 1]');
+    add(mGama, [gHuily, bGama]);
 
-    // Valores de acordo com seu envio
-    L.popup(pOp).setLatLng([-16.0350, -48.0610]).setContent('<div class="info-box huily-box"><b>Huily</b><br>Gama<br>KM Total: 19 Km<br><span class="destaque-valor">Custo: R$ 16,15</span></div>').addTo(grupoHuily);
-    L.popup(pOp).setLatLng([-15.9100, -47.9600]).setContent('<div class="info-box huily-box"><b>Huily</b><br>DVA1 (SGAN)<br>KM Total: 82 Km<br><span class="destaque-valor">Custo: R$ 69,70</span></div>').addTo(grupoHuily);
-    L.popup(pOp).setLatLng([-15.9400, -48.0200]).setContent('<div class="info-box huily-box"><b>Huily</b><br>Guará II<br>KM Total: 70,5 Km<br><span class="destaque-valor">Custo: R$ 60,00</span></div>').addTo(grupoHuily);
+    var mDVA = L.marker(dvaPlanoPiloto, {icon: iconeBanca}).bindPopup('<b>DVA 1 Detran (SGAN)</b><br>[Huily Rota 2]');
+    add(mDVA, [gHuily, bDVA]);
+
+    var mGuara = L.marker(guaraII, {icon: iconeBanca}).bindPopup('<b>Guará II (QE 25)</b><br>[Huily Rota 3]');
+    add(mGuara, [gHuily, bGuara]);
+
+    var mHuilySede = L.marker(novaSedeDetran, {icon: iconeBanca}).bindPopup('<b>Nova Sede DETRAN-DF</b><br>[Huily]');
+    add(mHuilySede, [gHuily, bDVA, bGuara, bSede]); // Sede faz parte da rota DVA e Guará
+
+    var rotaHuily1 = L.polyline([casaHuily, detranGama, casaHuily], {color: '#ff0000', weight: 3, dashArray: '8, 8', opacity: 0.8});
+    add(rotaHuily1, [gHuily, bGama]);
+
+    var rotaHuily2 = L.polyline([casaHuily, dvaPlanoPiloto, novaSedeDetran, casaHuily], {color: '#ff0000', weight: 3, dashArray: '8, 8', opacity: 0.8});
+    add(rotaHuily2, [gHuily, bDVA, bSede]);
+
+    var rotaHuily3 = L.polyline([casaHuily, guaraII, novaSedeDetran, casaHuily], {color: '#ff0000', weight: 3, dashArray: '8, 8', opacity: 0.8});
+    add(rotaHuily3, [gHuily, bGuara, bSede]);
+
+    var popHuily1 = L.popup(pOp).setLatLng([-16.0350, -48.0610]).setContent('<div class="info-box huily-box"><b>Huily</b><br>Gama<br>KM Total: 19 Km<br><span class="destaque-valor">Custo: R$ 16,15</span></div>');
+    add(popHuily1, [gHuily, bGama]);
+
+    var popHuily2 = L.popup(pOp).setLatLng([-15.9100, -47.9600]).setContent('<div class="info-box huily-box"><b>Huily</b><br>DVA1 (SGAN)<br>KM Total: 82 Km<br><span class="destaque-valor">Custo: R$ 69,70</span></div>');
+    add(popHuily2, [gHuily, bDVA, bSede]);
+
+    var popHuily3 = L.popup(pOp).setLatLng([-15.9400, -48.0200]).setContent('<div class="info-box huily-box"><b>Huily</b><br>Guará II<br>KM Total: 70,5 Km<br><span class="destaque-valor">Custo: R$ 60,00</span></div>');
+    add(popHuily3, [gHuily, bGuara, bSede]);
+
 
     // --- AGENTE: GUTEMBERG ---
-    L.marker(casaGuto, {icon: iconeCasa}).addTo(grupoGutemberg).bindPopup('<b>Casa do Agente</b><br>Ceilândia (Gutemberg)').openPopup();
-    adicionarBanca(grupoGutemberg, 'detranTaguatinga', detranTaguatinga, '<b>Detran DF - Taguatinga</b><br>[Gutemberg]');
-    adicionarBanca(grupoGutemberg, 'abadiao', abadiao, '<b>Estádio Abadião</b><br>[Gutemberg Rota 2]');
-    adicionarBanca(grupoGutemberg, 'feiraTaguatinga', feiraTaguatinga, '<b>Feira Permanente (QNL)</b><br>[Gutemberg Rota 3]');
+    var gutoCasa = L.marker(casaGuto, {icon: iconeCasa}).bindPopup('<b>Casa do Agente</b><br>Ceilândia (Gutemberg)');
+    add(gutoCasa, [gGuto, bTaguatinga, bAbadiao, bFeira]);
 
-    L.polyline([casaGuto, detranTaguatinga, casaGuto], {color: '#2d3436', weight: 3, dashArray: '8, 8', opacity: 0.85}).addTo(grupoGutemberg);
-    L.polyline([casaGuto, abadiao, detranTaguatinga, casaGuto], {color: '#2d3436', weight: 3, dashArray: '8, 8', opacity: 0.85}).addTo(grupoGutemberg);
-    L.polyline([casaGuto, feiraTaguatinga, detranTaguatinga, casaGuto], {color: '#2d3436', weight: 3, dashArray: '8, 8', opacity: 0.85}).addTo(grupoGutemberg);
+    var mTag = L.marker(detranTaguatinga, {icon: iconeBanca}).bindPopup('<b>Detran DF - Taguatinga</b><br>[Gutemberg]');
+    add(mTag, [gGuto, bTaguatinga, bAbadiao, bFeira]); // Taguatinga está em todas as rotas dele
 
-    // Valores de acordo com seu envio
-    L.popup(pOp).setLatLng([-15.7950, -48.0920]).setContent('<div class="info-box guto-box"><b>Gutemberg</b><br>Detran Taguatinga<br>KM Total: 17,9 Km<br><span class="destaque-valor">Custo: R$ 12,42</span></div>').addTo(grupoGutemberg);
-    // Para organizar visualmente, agrupei a informação do Abadião no mesmo ponto do Taguatinga (que é do lado) ou adicionei um pouco ao sul
-    L.popup(pOp).setLatLng([-15.8220, -48.0850]).setContent('<div class="info-box guto-box"><b>Gutemberg</b><br>Feira QNL<br>KM Total: 19,7 Km<br><span class="destaque-valor">Custo: R$ 16,75</span><br><hr style="margin:4px 0;"><br>Abadião<br>KM Total: 17,9 Km<br><span class="destaque-valor">Custo: R$ 15,22</span></div>').addTo(grupoGutemberg);
+    var mAbadiao = L.marker(abadiao, {icon: iconeBanca}).bindPopup('<b>Estádio Abadião</b><br>[Gutemberg Rota 2]');
+    add(mAbadiao, [gGuto, bAbadiao]);
 
-    map.fitBounds(grupoGeral.getBounds(), { padding: [40, 40] });
+    var mFeira = L.marker(feiraTaguatinga, {icon: iconeBanca}).bindPopup('<b>Feira Permanente (QNL)</b><br>[Gutemberg Rota 3]');
+    add(mFeira, [gGuto, bFeira]);
 
-    // --- SISTEMA INTERATIVO DE FILTRAGEM ---
-    function reativarTodasCamadas() {
-        map.addLayer(grupoVinicius); map.addLayer(grupoFabio); map.addLayer(grupoHuily); map.addLayer(grupoGutemberg);
+    var rotaGuto1 = L.polyline([casaGuto, detranTaguatinga, casaGuto], {color: '#2d3436', weight: 3, dashArray: '8, 8', opacity: 0.85});
+    add(rotaGuto1, [gGuto, bTaguatinga]);
+
+    var rotaGuto2 = L.polyline([casaGuto, abadiao, detranTaguatinga, casaGuto], {color: '#2d3436', weight: 3, dashArray: '8, 8', opacity: 0.85});
+    add(rotaGuto2, [gGuto, bAbadiao]);
+
+    var rotaGuto3 = L.polyline([casaGuto, feiraTaguatinga, detranTaguatinga, casaGuto], {color: '#2d3436', weight: 3, dashArray: '8, 8', opacity: 0.85});
+    add(rotaGuto3, [gGuto, bFeira]);
+
+    var popGuto1 = L.popup(pOp).setLatLng([-15.7950, -48.0920]).setContent('<div class="info-box guto-box"><b>Gutemberg</b><br>Detran Taguatinga<br>KM Total: 17,9 Km<br><span class="destaque-valor">Custo: R$ 12,42</span></div>');
+    add(popGuto1, [gGuto, bTaguatinga]);
+
+    var popGuto2 = L.popup(pOp).setLatLng([-15.8220, -48.1150]).setContent('<div class="info-box guto-box"><b>Gutemberg</b><br>Abadião<br>KM Total: 17,9 Km<br><span class="destaque-valor">Custo: R$ 15,22</span></div>');
+    add(popGuto2, [gGuto, bAbadiao]);
+
+    var popGuto3 = L.popup(pOp).setLatLng([-15.8300, -48.0750]).setContent('<div class="info-box guto-box"><b>Gutemberg</b><br>Feira QNL<br>KM Total: 19,7 Km<br><span class="destaque-valor">Custo: R$ 16,75</span></div>');
+    add(popGuto3, [gGuto, bFeira]);
+
+    // --- INICIALIZAÇÃO E SISTEMA INTERATIVO DE FILTRAGEM ---
+
+    function removerTudo() {
+        map.removeLayer(gVini); map.removeLayer(gFabio); map.removeLayer(gHuily); map.removeLayer(gGuto);
+        for(var key in gBancas) { map.removeLayer(gBancas[key]); }
     }
+
+    function reativarTodasCamadas() {
+        removerTudo();
+        map.addLayer(gVini); map.addLayer(gFabio); map.addLayer(gHuily); map.addLayer(gGuto);
+        var limitesGerais = L.latLngBounds();
+        limitesGerais.extend(gVini.getBounds()).extend(gFabio.getBounds()).extend(gHuily.getBounds()).extend(gGuto.getBounds());
+        map.fitBounds(limitesGerais, { padding: [40, 40] });
+    }
+
+    // Ativa todas as camadas na primeira vez que o site abre
+    reativarTodasCamadas();
 
     function filtrarPorAgente() {
         document.getElementById("bancaSelect").value = "todas";
         var escolha = document.getElementById("agentSelect").value;
-        map.removeLayer(grupoVinicius); map.removeLayer(grupoFabio); map.removeLayer(grupoHuily); map.removeLayer(grupoGutemberg);
+        removerTudo();
 
         if (escolha === "todos") {
-            reativarTodasCamadas(); map.fitBounds(grupoGeral.getBounds(), { padding: [40, 40] });
+            reativarTodasCamadas();
         } else if (escolha === "vinicius") {
-            map.addLayer(grupoVinicius); map.fitBounds(grupoVinicius.getBounds(), { padding: [60, 60] });
+            map.addLayer(gVini); map.fitBounds(gVini.getBounds(), { padding: [60, 60] });
         } else if (escolha === "fabio") {
-            map.addLayer(grupoFabio); map.fitBounds(grupoFabio.getBounds(), { padding: [80, 80] });
+            map.addLayer(gFabio); map.fitBounds(gFabio.getBounds(), { padding: [80, 80] });
         } else if (escolha === "huily") {
-            map.addLayer(grupoHuily); map.fitBounds(grupoHuily.getBounds(), { padding: [60, 60] });
+            map.addLayer(gHuily); map.fitBounds(gHuily.getBounds(), { padding: [60, 60] });
         } else if (escolha === "gutemberg") {
-            map.addLayer(grupoGutemberg); map.fitBounds(grupoGutemberg.getBounds(), { padding: [80, 80] });
+            map.addLayer(gGuto); map.fitBounds(gGuto.getBounds(), { padding: [80, 80] });
         }
     }
 
     function filtrarPorBanca() {
         document.getElementById("agentSelect").value = "todos";
         var escolhaBanca = document.getElementById("bancaSelect").value;
+        removerTudo();
 
         if (escolhaBanca === "todas") {
-            reativarTodasCamadas(); map.fitBounds(grupoGeral.getBounds(), { padding: [40, 40] }); return;
-        }
-
-        map.removeLayer(grupoVinicius); map.removeLayer(grupoFabio); map.removeLayer(grupoHuily); map.removeLayer(grupoGutemberg);
-
-        var alvos = marcadoresBancas[escolhaBanca];
-        if (alvos && alvos.length > 0) {
-            var boundsFoco = L.latLngBounds();
-            alvos.forEach(function(item) {
-                if (!map.hasLayer(item.grupo)) map.addLayer(item.grupo);
-                boundsFoco.extend(item.marcador.getLatLng());
+            reativarTodasCamadas();
+        } else {
+            var camadaSelecionada = gBancas[escolhaBanca];
+            map.addLayer(camadaSelecionada);
+            map.fitBounds(camadaSelecionada.getBounds(), { padding: [60, 60] });
+            
+            // Abre as pequenas tooltips (popups clicáveis) dos marcadores para destacar o local
+            camadaSelecionada.eachLayer(function(l) {
+                if (l instanceof L.Marker) { l.openPopup(); }
             });
-            map.setView(boundsFoco.getCenter(), 12);
-            alvos.forEach(function(item) { item.marcador.openPopup(); });
         }
     }
 </script>
